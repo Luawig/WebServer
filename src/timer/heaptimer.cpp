@@ -4,23 +4,30 @@
 
 #include "timer/heaptimer.h"
 
-HeapTimer::HeapTimer() = default;
-
-HeapTimer::~HeapTimer() {
-    clear();
-}
-
 void HeapTimer::adjust(int id, int newExpires) {
-    map_[id] = static_cast<std::chrono::milliseconds>(newExpires) + Clock::now();
+    std::vector<Timer> tmp;
+    while (!heap_.empty()) {
+        Timer timer = heap_.top();
+        heap_.pop();
+        if (timer.id == id) {
+            timer.expires = static_cast<std::chrono::milliseconds>(newExpires) + Clock::now();
+            tmp.push_back(timer);
+            break;
+        } else {
+            tmp.push_back(timer);
+        }
+    }
+    for (auto &timer : tmp) {
+        heap_.push(timer);
+    }
 }
 
-void HeapTimer::add(int id, int timeout, const TimeoutCallBack &cb) {
+void HeapTimer::add(int id, int timeout, const TimeoutCallBackType &cb) {
     heap_.emplace(id, static_cast<std::chrono::milliseconds>(timeout) + Clock::now(), cb);
 }
 
-void HeapTimer::clear() {
+[[maybe_unused]] void HeapTimer::clear() {
     while (!heap_.empty()) heap_.pop();
-    map_.clear();
 }
 
 int HeapTimer::getNextTick() {
