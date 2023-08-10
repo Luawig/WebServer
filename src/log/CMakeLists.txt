@@ -7,6 +7,5 @@ target_link_libraries(LogLib
 
 target_include_directories(LogLib
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )

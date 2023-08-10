@@ -14,6 +14,7 @@
 #include <cstdarg>           // vastart va_end
 #include <cassert>
 #include <sys/stat.h>         //mkdir
+
 #include "blockqueue.h"
 #include "buffer/buffer.h"
 
@@ -46,8 +47,7 @@ private:
 
     void AsyncWrite_();
 
-private:
-    static const int LOG_PATH_LEN = 256;
+    static const int LOG_LEN = 256;
     static const int LOG_NAME_LEN = 256;
     static const int MAX_LINES = 50000;
 
@@ -68,7 +68,7 @@ private:
     FILE *fp_;
     std::unique_ptr<BlockDeque<std::string>> deque_;
     std::unique_ptr<std::thread> writeThread_;
-    std::mutex mtx_;
+    std::mutex lock_;
 };
 
 #define LOG_BASE(level, format, ...) \

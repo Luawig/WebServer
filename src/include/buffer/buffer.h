@@ -24,7 +24,7 @@ public:
 
     size_t append(const char *data, size_t len);
 
-    size_t append(const Buffer &buffer);
+    [[maybe_unused]] size_t append(const Buffer &buffer);
 
     [[nodiscard]] const char *peek() const {
         return &(*buffer_.begin());

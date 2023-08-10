@@ -4,8 +4,6 @@
 
 #include "log/log.h"
 
-using namespace std;
-
 Log::Log() {
     lineCount_ = 0;
     isAsync_ = false;
@@ -16,42 +14,39 @@ Log::Log() {
 }
 
 Log::~Log() {
-    if(writeThread_ && writeThread_->joinable()) {
-        while(!deque_->empty()) {
+    if (writeThread_ && writeThread_->joinable()) {
+        while (!deque_->empty()) {
             deque_->flush();
         }
         deque_->Close();
         writeThread_->join();
     }
-    if(fp_) {
-        lock_guard<mutex> locker(mtx_);
+    if (fp_) {
+        std::lock_guard<std::mutex> lock(lock_);
         flush();
         fclose(fp_);
     }
 }
 
 int Log::GetLevel() {
-    lock_guard<mutex> locker(mtx_);
+    std::lock_guard<std::mutex> lock(lock_);
     return level_;
 }
 
 void Log::SetLevel(int level) {
-    lock_guard<mutex> locker(mtx_);
+    std::lock_guard<std::mutex> lock(lock_);
     level_ = level;
 }
 
-void Log::init(int level = 1, const char* path, const char* suffix,
-    int maxQueueSize) {
+void Log::init(int level = 1, const char *path, const char *suffix,
+               int maxQueueSize) {
     isOpen_ = true;
     SetLevel(level);
-    if(maxQueueSize > 0) {
+    if (maxQueueSize > 0) {
         isAsync_ = true;
-        if(!deque_) {
-            unique_ptr<BlockDeque<std::string>> newDeque(new BlockDeque<std::string>);
-            deque_ = std::move(newDeque);
-            
-            std::unique_ptr<std::thread> NewThread(new thread(FlushLogThread));
-            writeThread_ = std::move(NewThread);
+        if (!deque_) {
+            deque_ = std::make_unique<BlockDeque<std::string>>();
+            writeThread_ = std::make_unique<std::thread>(FlushLogThread);
         }
     } else {
         isAsync_ = false;
@@ -65,20 +60,20 @@ void Log::init(int level = 1, const char* path, const char* suffix,
     path_ = path;
     suffix_ = suffix;
     char fileName[LOG_NAME_LEN] = {0};
-    snprintf(fileName, LOG_NAME_LEN - 1, "%s/%04d_%02d_%02d%s", 
-            path_, t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, suffix_);
+    snprintf(fileName, LOG_NAME_LEN - 1, "%s/%04d_%02d_%02d%s",
+             path_, t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, suffix_);
     toDay_ = t.tm_mday;
 
     {
-        lock_guard<mutex> locker(mtx_);
+        std::lock_guard<std::mutex> lock(lock_);
         buff_.retrieveAll();
-        if(fp_) { 
+        if (fp_) {
             flush();
-            fclose(fp_); 
+            fclose(fp_);
         }
 
         fp_ = fopen(fileName, "a");
-        if(fp_ == nullptr) {
+        if (fp_ == nullptr) {
             mkdir(path_, 0777);
             fp_ = fopen(fileName, "a");
         }
@@ -94,106 +89,90 @@ void Log::write(int level, const char *format, ...) {
     struct tm t = *sysTime;
     va_list vaList;
 
-    /* 日志日期 日志行数 */
-    if (toDay_ != t.tm_mday || (lineCount_ && (lineCount_  %  MAX_LINES == 0)))
-    {
-        unique_lock<mutex> locker(mtx_);
-        locker.unlock();
-        
+    std::unique_lock<std::mutex> lock(lock_);
+
+    if (toDay_ != t.tm_mday || (lineCount_ && (lineCount_ % MAX_LINES == 0))) {
+
         char newFile[LOG_NAME_LEN];
         char tail[36] = {0};
         snprintf(tail, 36, "%04d_%02d_%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
 
-        if (toDay_ != t.tm_mday)
-        {
+        if (toDay_ != t.tm_mday) {
             snprintf(newFile, LOG_NAME_LEN - 72, "%s/%s%s", path_, tail, suffix_);
             toDay_ = t.tm_mday;
             lineCount_ = 0;
+        } else {
+            snprintf(newFile, LOG_NAME_LEN - 72, "%s/%s-%d%s", path_, tail, (lineCount_ / MAX_LINES), suffix_);
         }
-        else {
-            snprintf(newFile, LOG_NAME_LEN - 72, "%s/%s-%d%s", path_, tail, (lineCount_  / MAX_LINES), suffix_);
-        }
-        
-        locker.lock();
+
         flush();
         fclose(fp_);
         fp_ = fopen(newFile, "a");
         assert(fp_ != nullptr);
     }
 
-    {
-        unique_lock<mutex> locker(mtx_);
-        lineCount_++;
+    lineCount_++;
 
-//        int n = snprintf(buff_.BeginWrite(), 128, "%d-%02d-%02d %02d:%02d:%02d.%06ld ",
-//                    t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
-//                    t.tm_hour, t.tm_min, t.tm_sec, now.tv_usec);
-//
-//        buff_.HasWritten(n);
+    char buf[LOG_LEN];
+    int n = snprintf(buf, LOG_LEN, "%d-%02d-%02d %02d:%02d:%02d.%06ld ",
+                     t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+                     t.tm_hour, t.tm_min, t.tm_sec, now.tv_usec);
+    buff_.append(buf, n);
 
-        char timeBuf[256];
-        int n = snprintf(timeBuf, 256, "%d-%02d-%02d %02d:%02d:%02d.%06ld ",
-                         t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
-                         t.tm_hour, t.tm_min, t.tm_sec, now.tv_usec);
-        buff_.append(timeBuf, n);
+    AppendLogLevelTitle_(level);
 
-        AppendLogLevelTitle_(level);
+    va_start(vaList, format);
 
-        va_start(vaList, format);
-//        int m = vsnprintf(buff_.BeginWrite(), buff_.writableBytes(), format, vaList);
+    int m = vsnprintf(buf, buff_.writableBytes(), format, vaList);
+    buff_.append(buf, m);
+    va_end(vaList);
 
-        int m = vsnprintf(timeBuf, buff_.writableBytes(), format, vaList);
-        buff_.append(timeBuf, m);
-        va_end(vaList);
+    buff_.append("\n\0");
 
-//        buff_.HasWritten(m);
-        buff_.append("\n\0", 2);
-
-        if(isAsync_ && deque_ && !deque_->full()) {
-            deque_->push_back(buff_.retrieveAllToStr());
-        } else {
-            fputs(buff_.peek(), fp_);
-        }
-        buff_.retrieveAll();
+    if (isAsync_ && deque_ && !deque_->full()) {
+        deque_->push_back(buff_.retrieveAllToStr());
+    } else {
+        fputs(buff_.peek(), fp_);
     }
+    buff_.retrieveAll();
 }
 
 void Log::AppendLogLevelTitle_(int level) {
-    switch(level) {
-    case 0:
-        buff_.append("[debug]: ", 9);
-        break;
-    case 1:
-        buff_.append("[info] : ", 9);
-        break;
-    case 2:
-        buff_.append("[warn] : ", 9);
-        break;
-    case 3:
-        buff_.append("[error]: ", 9);
-        break;
-    default:
-        buff_.append("[info] : ", 9);
-        break;
+    switch (level) {
+        case 0:
+            buff_.append("[debug]: ");
+            break;
+        case 1:
+            buff_.append("[info] : ");
+            break;
+        case 2:
+            buff_.append("[warn] : ");
+            break;
+        case 3:
+            buff_.append("[error]: ");
+            break;
+        default:
+            buff_.append("[info] : ");
+            break;
     }
 }
 
 void Log::flush() {
-    if(isAsync_) { 
-        deque_->flush(); 
+    if (isAsync_) {
+        deque_->flush();
     }
     fflush(fp_);
 }
 
 void Log::AsyncWrite_() {
     string str;
-    while(deque_->pop(str)) {
-        lock_guard<mutex> locker(mtx_);
+    while (deque_->pop(str)) {
+        std::lock_guard<std::mutex> lock(lock_);
         fputs(str.c_str(), fp_);
     }
 }
 
-Log* Log::Instance() {
+Log *Log::Instance() {
     static Log inst;
     return &inst;
 }
