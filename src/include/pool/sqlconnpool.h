@@ -20,11 +20,11 @@ public:
 
     void freeConn(MYSQL *conn);
 
-    unsigned int getFreeConnCount();
+    [[maybe_unused]] unsigned int getFreeConnNum();
 
     void init(const char *host, unsigned int port,
               const char *user, const char *pwd,
-              const char *dbName, unsigned int connSize);
+              const char *dbName, unsigned int connNum = 8);
 
     void closePool();
 
@@ -33,11 +33,9 @@ private:
 
     ~SqlConnPool();
 
-    unsigned int MAX_CONN_{};
-
     std::queue<MYSQL *> connQueue_;
-    std::mutex mux_;
-    sem_t semID_{};
+    std::mutex lock_;
+    std::condition_variable cv_;
 };
 
 

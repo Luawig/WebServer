@@ -11,13 +11,11 @@ SqlConnPool *SqlConnPool::Instance() {
 
 void SqlConnPool::init(const char *host, unsigned int port,
                        const char *user, const char *pwd, const char *dbName,
-                       unsigned int connSize = 10) {
-    for (int i = 0; i < connSize; i++) {
-        MYSQL *sql = nullptr;
-        sql = mysql_init(sql);
+                       unsigned int connNum) {
+    for (int i = 0; i < connNum; i++) {
+        auto sql = mysql_init(nullptr);
         if (!sql) {
             LOG_ERROR("MySql init error!")
-            assert(sql);
         }
         sql = mysql_real_connect(sql, host,
                                  user, pwd,
@@ -27,34 +25,34 @@ void SqlConnPool::init(const char *host, unsigned int port,
         }
         connQueue_.push(sql);
     }
-    MAX_CONN_ = connSize;
-    sem_init(&semID_, 0, MAX_CONN_);
 }
 
 MYSQL *SqlConnPool::getConn() {
-    MYSQL *sql;
+    std::unique_lock<std::mutex> lock(lock_);
     if (connQueue_.empty()) {
         LOG_WARN("SqlConnPool busy!")
+        cv_.wait(lock);
+    }
+    if (connQueue_.empty()) {
+        LOG_WARN("Get MySqlConn error!")
         return nullptr;
     }
-    sem_wait(&semID_);
-    {
-        std::unique_lock<std::mutex> lock(mux_);
-        sql = connQueue_.front();
-        connQueue_.pop();
-    }
+    MYSQL *sql = connQueue_.front();
+    connQueue_.pop();
     return sql;
 }
 
 void SqlConnPool::freeConn(MYSQL *sql) {
     assert(sql);
-    std::unique_lock<std::mutex> lock(mux_);
-    connQueue_.push(sql);
-    sem_post(&semID_);
+    {
+        std::unique_lock<std::mutex> lock(lock_);
+        connQueue_.push(sql);
+    }
+    cv_.notify_one();
 }
 
 void SqlConnPool::closePool() {
-    std::unique_lock<std::mutex> lock(mux_);
+    std::unique_lock<std::mutex> lock(lock_);
     while (!connQueue_.empty()) {
         auto item = connQueue_.front();
         connQueue_.pop();
@@ -63,8 +61,8 @@ void SqlConnPool::closePool() {
     mysql_library_end();
 }
 
-unsigned int SqlConnPool::getFreeConnCount() {
-    std::unique_lock<std::mutex> lock(mux_);
+[[maybe_unused]] unsigned int SqlConnPool::getFreeConnNum() {
+    std::unique_lock<std::mutex> lock(lock_);
     return connQueue_.size();
 }
 
