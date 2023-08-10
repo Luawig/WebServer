@@ -15,17 +15,17 @@
 
 class ThreadPool {
 public:
-    explicit ThreadPool(unsigned int thread_count);
+    explicit ThreadPool(unsigned int thread_num);
 
     ~ThreadPool();
 
-    [[nodiscard]] bool is_running() const { return is_running_; }
-
-    [[nodiscard]] unsigned int threadCount() const { return threadCount_; }
-
     void addTask(std::function<void()> task);
 
-    void addThread(unsigned int thread_count);
+    [[maybe_unused]] [[nodiscard]] bool is_running() const { return is_running_; }
+
+    [[maybe_unused]] [[nodiscard]] unsigned int threadNum() const { return threadNum_; }
+
+    [[maybe_unused]] void addThread(unsigned int thread_num);
 
     void stop();
 
@@ -41,7 +41,7 @@ private:
 
     bool is_running_{};
 
-    unsigned int threadCount_{};
+    unsigned int threadNum_{};
 
     std::condition_variable cv_;
 };
