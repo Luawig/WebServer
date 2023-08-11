@@ -10,7 +10,7 @@
 #include <vector>
 
 class Epoller {
-public:
+  public:
     explicit Epoller(int maxEvent = 1024) : epollFd_(epoll_create(512)), events_(maxEvent) {}
 
     ~Epoller() { close(epollFd_); }
@@ -31,7 +31,7 @@ public:
         return events_[i].events;
     }
 
-private:
+  private:
     int epollFd_;
 
     std::vector<struct epoll_event> events_;

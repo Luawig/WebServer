@@ -17,7 +17,7 @@ void HeapTimer::adjust(int id, int newExpires) {
             tmp.push_back(timer);
         }
     }
-    for (auto &timer : tmp) {
+    for (auto &timer: tmp) {
         heap_.push(timer);
     }
 }
@@ -27,7 +27,9 @@ void HeapTimer::add(int id, int timeout, const TimeoutCallBackType &cb) {
 }
 
 [[maybe_unused]] void HeapTimer::clear() {
-    while (!heap_.empty()) heap_.pop();
+    while (!heap_.empty()) {
+        heap_.pop();
+    }
 }
 
 int HeapTimer::getNextTick() {
@@ -36,6 +38,8 @@ int HeapTimer::getNextTick() {
         heap_.top().cb();
         heap_.pop();
     }
-    if (heap_.empty()) return -1;
+    if (heap_.empty()) {
+        return -1;
+    }
     return std::chrono::duration_cast<std::chrono::milliseconds>(heap_.top().expires - Clock::now()).count();
 }

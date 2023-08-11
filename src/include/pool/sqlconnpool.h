@@ -13,7 +13,7 @@
 #include "log/log.h"
 
 class SqlConnPool {
-public:
+  public:
     static SqlConnPool *Instance();
 
     MYSQL *getConn();
@@ -28,7 +28,7 @@ public:
 
     void closePool();
 
-private:
+  private:
     SqlConnPool() = default;
 
     ~SqlConnPool();

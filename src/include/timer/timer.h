@@ -14,7 +14,7 @@ typedef std::chrono::high_resolution_clock Clock;
 typedef Clock::time_point TimeStamp;
 
 class Timer {
-public:
+  public:
     int id;
     TimeStamp expires;
     TimeoutCallBackType cb;

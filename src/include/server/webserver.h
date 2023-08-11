@@ -21,7 +21,7 @@
 using namespace std;
 
 class WebServer {
-public:
+  public:
     explicit WebServer(int argc, char *const *argv);
 
     ~WebServer();
@@ -35,7 +35,7 @@ public:
     // 运行
     void run();
 
-private:
+  private:
 
     bool initSocket_();
 

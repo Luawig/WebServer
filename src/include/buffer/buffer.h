@@ -15,7 +15,7 @@ using std::size_t, std::string;
 const size_t BUFFER_SIZE = 65535;
 
 class Buffer {
-public:
+  public:
     explicit Buffer(unsigned int capacity = 1024);
 
     ~Buffer() = default;
@@ -50,7 +50,7 @@ public:
         return buffer_.size();
     }
 
-private:
+  private:
     std::vector<char> buffer_;
 };
 

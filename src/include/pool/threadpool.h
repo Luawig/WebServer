@@ -14,7 +14,7 @@
 #include <condition_variable>
 
 class ThreadPool {
-public:
+  public:
     explicit ThreadPool(unsigned int thread_num);
 
     ~ThreadPool();
@@ -29,7 +29,7 @@ public:
 
     void stop();
 
-private:
+  private:
     void run_();
 
     std::vector<std::shared_ptr<std::thread>> threads_;

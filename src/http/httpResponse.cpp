@@ -43,7 +43,9 @@ const unordered_map<int, string> HttpResponse::CODE_PATH = {
 
 void HttpResponse::init(const std::string &srcDir, string &path, bool isKeepAlive, int code) {
     assert(!srcDir.empty());
-    if (mmFile_) { unmapFile(); }
+    if (mmFile_) {
+        unmapFile();
+    }
     code_ = code;
     isKeepAlive_ = isKeepAlive;
     path_ = path;

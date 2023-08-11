@@ -19,7 +19,7 @@
 #include "buffer/buffer.h"
 
 class Log {
-public:
+  public:
     void init(int level, const char *path = "./log",
               const char *suffix = ".log",
               int maxQueueCapacity = 1024);
@@ -38,7 +38,7 @@ public:
 
     [[nodiscard]] bool IsOpen() const { return isOpen_; }
 
-private:
+  private:
     Log();
 
     void AppendLogLevelTitle_(int level);

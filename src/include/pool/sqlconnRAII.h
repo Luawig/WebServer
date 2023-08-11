@@ -9,7 +9,7 @@
 
 /* 资源在对象构造初始化 资源在对象析构时释放*/
 class SqlConnRAII {
-public:
+  public:
     SqlConnRAII(MYSQL **sql, SqlConnPool *connpool) {
         *sql = connpool->getConn();
         sql_ = *sql;
@@ -17,10 +17,12 @@ public:
     }
 
     ~SqlConnRAII() {
-        if (sql_) { connpool_->freeConn(sql_); }
+        if (sql_) {
+            connpool_->freeConn(sql_);
+        }
     }
 
-private:
+  private:
     MYSQL *sql_;
     SqlConnPool *connpool_;
 };

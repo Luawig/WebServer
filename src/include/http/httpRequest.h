@@ -16,7 +16,7 @@
 #include "pool/sqlconnpool.h"
 
 class HttpRequest {
-public:
+  public:
     enum PARSE_STATE {
         REQUEST_LINE,
         HEADERS,
@@ -61,20 +61,22 @@ public:
     }
 
     std::string getPost(const std::string &key) const {
-        if (post_.count(key) == 1)
+        if (post_.count(key) == 1) {
             return post_.find(key)->second;
+        }
         return "";
     }
 
     std::string getPost(const char *key) const {
-        if (post_.count(key) == 1)
+        if (post_.count(key) == 1) {
             return post_.find(key)->second;
+        }
         return "";
     }
 
     bool isKeepAlive() const;
 
-private:
+  private:
     bool parseRequestLine_(const std::string &line);
 
     void parseHeader_(const std::string &line);

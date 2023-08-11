@@ -28,7 +28,9 @@ void Buffer::retrieve(size_t len) {
 }
 
 void Buffer::retrieveUntil(const char *end) {
-    if (peek() > end) return;
+    if (peek() > end) {
+        return;
+    }
     retrieve(end - peek());
 }
 

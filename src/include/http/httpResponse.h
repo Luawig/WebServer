@@ -13,7 +13,7 @@
 #include "log/log.h"
 
 class HttpResponse {
-public:
+  public:
     HttpResponse() = default;
 
     ~HttpResponse() { unmapFile(); }
@@ -34,7 +34,7 @@ public:
 
     [[nodiscard]] int Code() const { return code_; }
 
-private:
+  private:
     void addStateLine_(Buffer &buffer);
 
     void addHeader_(Buffer &buffer);

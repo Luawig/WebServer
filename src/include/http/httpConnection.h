@@ -16,7 +16,7 @@
 #include "httpResponse.h"
 
 class HttpConnection {
-public:
+  public:
     HttpConnection(int fd, const sockaddr_in &addr);
 
     ~HttpConnection();
@@ -55,7 +55,7 @@ public:
     static const char *srcDir;
     static std::atomic<int> userCount;
 
-private:
+  private:
     int fd_{-1};
     struct sockaddr_in addr_{0};
 

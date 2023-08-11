@@ -23,15 +23,19 @@ ThreadPool::~ThreadPool() {
 void ThreadPool::run_() {
     while (is_running_) {
         std::unique_lock<std::mutex> lock(tasksMux_);
-        if (tasks_.empty()) this->cv_.wait(lock);
-        if (tasks_.empty()) continue;
+        if (tasks_.empty()) {
+            this->cv_.wait(lock);
+        }
+        if (tasks_.empty()) {
+            continue;
+        }
         auto task = tasks_.front();
         tasks_.pop();
         task();
     }
 }
 
-void ThreadPool::addTask(std::function<void()>task) {
+void ThreadPool::addTask(std::function<void()> task) {
     {
         std::unique_lock<std::mutex> lock(tasksMux_);
         tasks_.emplace(std::forward<std::function<void()>>(task));

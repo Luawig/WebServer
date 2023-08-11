@@ -4,16 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Leon-注册</title>
-    <link rel="icon" href="images/favicon.ico">
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/animate.css">
-    <link rel="stylesheet" href="css/magnific-popup.css">
-    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link href="images/favicon.ico" rel="icon">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/magnific-popup.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
     <!-- Main css -->
-    <link rel="stylesheet" href="css/style.css">
+    <link href="css/style.css" rel="stylesheet">
 </head>
 
-<body data-spy="scroll" data-target=".navbar-collapse" data-offset="50">
+<body data-offset="50" data-spy="scroll" data-target=".navbar-collapse">
 
 <!-- PRE LOADER -->
 <div class="preloader">
@@ -28,13 +28,13 @@
     <div class="container">
 
         <div class="navbar-header">
-            <button class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <button class="navbar-toggle" data-target=".navbar-collapse" data-toggle="collapse">
                 <span class="icon icon-bar"></span>
                 <span class="icon icon-bar"></span>
                 <span class="icon icon-bar"></span>
             </button>
             <!-- lOGO TEXT HERE -->
-            <a href="/" class="navbar-brand">Leon</a>
+            <a class="navbar-brand" href="/">Leon</a>
         </div>
         <div class="collapse navbar-collapse">
             <ul class="nav navbar-nav navbar-right">
@@ -58,15 +58,15 @@
                 <form action="register" method="post">
                     <div style="text-align: center">
                         <label>
-                            <input type="text" name="username" placeholder="用户名"
-                                   required="required">
+                            <input name="username" placeholder="用户名" required="required"
+                                   type="text">
                         </label>
                     </div>
                     <br/>
                     <div style="text-align: center">
                         <label>
-                            <input type="password" name="password" placeholder="用户密码"
-                                   required="required">
+                            <input name="password" placeholder="用户密码" required="required"
+                                   type="password">
                         </label>
                     </div>
                     <br/>

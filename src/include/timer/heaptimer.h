@@ -10,7 +10,7 @@
 #include "timer.h"
 
 class HeapTimer {
-public:
+  public:
     HeapTimer() = default;
 
     ~HeapTimer() = default;
@@ -23,7 +23,7 @@ public:
 
     int getNextTick();
 
-private:
+  private:
     std::priority_queue<Timer> heap_;
 };
 

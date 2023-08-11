@@ -27,8 +27,9 @@ WebServer::WebServer(int argc, char *const *argv) : timer_(new HeapTimer()),
 
     if (!closeLog_) {
         Log::Instance()->init(logLevel_, srcLog_, ".log", 1024);
-        if (isClose_) { LOG_ERROR("========== Server init error!==========") }
-        else {
+        if (isClose_) {
+            LOG_ERROR("========== Server init error!==========")
+        } else {
             LOG_INFO("========== Server init ==========")
             LOG_INFO("Port:%d, OpenLinger: %s", port_, optLinger_ ? "true" : "false")
             LOG_INFO("Listen Mode: %s, OpenConn Mode: %s",
@@ -190,8 +191,9 @@ void WebServer::dealListen_() {
     socklen_t len = sizeof(addr);
     do {
         int fd = accept(listenfd_, (struct sockaddr *) &addr, &len);
-        if (fd <= 0) { return; }
-        else if (HttpConnection::userCount >= MAXFD_) {
+        if (fd <= 0) {
+            return;
+        } else if (HttpConnection::userCount >= MAXFD_) {
             sendError_(fd, "Server busy!");
             LOG_WARN("Clients is full!")
             return;
@@ -252,6 +254,7 @@ void WebServer::extendTime_(HttpConnection *client) {
 void WebServer::onRead_(HttpConnection *client) {
     int readErrno = 0;
     auto ret = client->read(&readErrno);
+    // 读取失败并且不是操作当前不可用
     if (ret <= 0 && readErrno != EAGAIN) {
         closeConn_(client);
         return;

@@ -12,7 +12,7 @@
 
 template<class T>
 class BlockDeque {
-public:
+  public:
     explicit BlockDeque(size_t MaxCapacity = 1000);
 
     ~BlockDeque();
@@ -43,7 +43,7 @@ public:
 
     void flush();
 
-private:
+  private:
     std::deque<T> deq_;
 
     size_t capacity_;
