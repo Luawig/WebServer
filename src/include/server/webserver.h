@@ -7,6 +7,7 @@
 
 #include <csignal>
 #include <getopt.h>
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -21,11 +22,11 @@ using namespace std;
 
 class WebServer {
 public:
-    WebServer();
+    explicit WebServer(int argc, char *const *argv);
 
     ~WebServer();
 
-    // 处理命令参数
+    // 处理命令行参数
     void parse_args(int argc, char *const *argv);
 
     // 命令行参数帮助
@@ -47,7 +48,7 @@ private:
 
     void dealRead_(HttpConnection *client);
 
-    void extentTime_(HttpConnection *client);
+    void extendTime_(HttpConnection *client);
 
     void closeConn_(HttpConnection *client);
 
@@ -70,7 +71,7 @@ private:
     // connfd触发模式，0 LT，1 ET
     bool connfdMode_{false};
 
-    // 优雅关闭链接？？0 不使用，1 使用
+    // 关闭 socket 时是否等待
     bool optLinger_{false};
 
     // 数据库连接池数量
@@ -97,10 +98,13 @@ private:
     // mysql 数据库
     string sqlDatabase_{"webserver_demo1"};
 
-    // 资源路径？？
-    string srcDir_;
+    // 资源路径
+    char *srcDir_;
 
-    // 超时时间？？
+    // 日志路径
+    char *srcLog_;
+
+    // 超时时间
     int timeoutMS_{60000};
 
     //
