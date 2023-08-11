@@ -18,8 +18,6 @@
 #include "http/httpConnection.h"
 #include "server/epoller.h"
 
-using namespace std;
-
 class WebServer {
   public:
     explicit WebServer(int argc, char *const *argv);

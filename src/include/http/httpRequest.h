@@ -40,7 +40,8 @@ class HttpRequest {
     ~HttpRequest() = default;
 
     void clear() {
-        method_ = path_ = version_ = body_ = "";
+        method_ = path_ = body_ = "";
+        version_ = "1.1";
         state_ = REQUEST_LINE;
         header_.clear();
         post_.clear();
@@ -56,7 +57,7 @@ class HttpRequest {
         return method_;
     }
 
-    std::string version() const {
+    std::string &version() {
         return version_;
     }
 
@@ -90,7 +91,7 @@ class HttpRequest {
     void parseFromUrlencoded_();
 
     PARSE_STATE state_{REQUEST_LINE};
-    std::string method_{}, path_{}, version_{}, body_{};
+    std::string method_{}, path_{}, version_{"1.1"}, body_{};
     std::unordered_map<std::string, std::string> header_{};
     std::unordered_map<std::string, std::string> post_{};
 

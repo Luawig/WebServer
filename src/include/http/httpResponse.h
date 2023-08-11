@@ -18,21 +18,21 @@ class HttpResponse {
 
     ~HttpResponse() { unmapFile(); }
 
-    void init(const std::string &srcDir, std::string &path, bool isKeepAlive = false, int code = -1);
+    void init(const std::string &srcDir, std::string &path, std::string &version, bool isKeepAlive = false, int code = -1);
 
     void makeResponse(Buffer &buffer);
 
     void unmapFile();
 
-    char *file() { return mmFile_; }
+    char *file() { return mmapFile_; }
 
     [[nodiscard]] size_t fileLen() const {
-        return mmFileStat_.st_size;
+        return fileStat_.st_size;
     }
 
     void errorContent(Buffer &buffer, const std::string &message) const;
 
-    [[nodiscard]] int Code() const { return code_; }
+    [[maybe_unused]] [[nodiscard]] int Code() const { return code_; }
 
   private:
     void addStateLine_(Buffer &buffer);
@@ -50,9 +50,10 @@ class HttpResponse {
 
     std::string path_{};
     std::string srcDir_{};
+    std::string version_{};
 
-    char *mmFile_{nullptr};
-    struct stat mmFileStat_{0};
+    char *mmapFile_{nullptr};
+    struct stat fileStat_{0};
 
     static const std::unordered_map<std::string, std::string> SUFFIX_TYPE;
     static const std::unordered_map<int, std::string> CODE_STATUS;

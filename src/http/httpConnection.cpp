@@ -67,18 +67,17 @@ bool HttpConnection::process() {
         return false;
     } else if (request_.parse(readBuffer_)) {
         LOG_DEBUG("%s", request_.path().c_str())
-        response_.init(srcDir, request_.path(), request_.isKeepAlive(), 200);
+        response_.init(srcDir, request_.path(), request_.version(), request_.isKeepAlive(), 200);
     } else {
-        response_.init(srcDir, request_.path(), false, 400);
+        response_.init(srcDir, request_.path(), request_.version(), false, 400);
     }
 
+    // 生成响应头
     response_.makeResponse(writeBuffer_);
-    /* 响应头 */
+
     iov_[0].iov_base = const_cast<char *>(writeBuffer_.peek());
     iov_[0].iov_len = writeBuffer_.readableBytes();
     iovCnt_ = 1;
-
-    /* 文件 */
     if (response_.fileLen() > 0 && response_.file()) {
         iov_[1].iov_base = response_.file();
         iov_[1].iov_len = response_.fileLen();

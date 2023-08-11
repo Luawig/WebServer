@@ -4,13 +4,11 @@
 
 #include "http/httpRequest.h"
 
-using namespace std;
-
-const unordered_set<string> HttpRequest::DEFAULT_HTML{
+const std::unordered_set<string> HttpRequest::DEFAULT_HTML{
         "/index", "/register", "/login",
         "/welcome", "/video", "/picture",};
 
-const unordered_map<string, int> HttpRequest::DEFAULT_HTML_TAG{
+const std::unordered_map<string, int> HttpRequest::DEFAULT_HTML_TAG{
         {"/register.html", 0},
         {"/login.html",    1},};
 
@@ -28,7 +26,7 @@ bool HttpRequest::parse(Buffer &buffer) {
     }
     const char CRLF[] = "\r\n";
     while (buffer.readableBytes() && state_ != FINISH) {
-        const char *lineEnd = search(buffer.peek(), buffer.peek() + buffer.readableBytes(), CRLF, CRLF + 2);
+        const char *lineEnd = std::search(buffer.peek(), buffer.peek() + buffer.readableBytes(), CRLF, CRLF + 2);
         std::string line(buffer.peek(), lineEnd);
         switch (state_) {
             case REQUEST_LINE:
@@ -71,8 +69,8 @@ void HttpRequest::parsePath_() {
 }
 
 bool HttpRequest::parseRequestLine_(const std::string &line) {
-    regex patten("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
-    smatch subMatch;
+    std::regex patten("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
+    std::smatch subMatch;
     if (regex_match(line, subMatch, patten)) {
         method_ = subMatch[1];
         path_ = subMatch[2];
@@ -86,8 +84,8 @@ bool HttpRequest::parseRequestLine_(const std::string &line) {
 }
 
 void HttpRequest::parseHeader_(const std::string &line) {
-    regex patten("^([^:]*): ?(.*)$");
-    smatch subMatch;
+    std::regex patten("^([^:]*): ?(.*)$");
+    std::smatch subMatch;
     if (regex_match(line, subMatch, patten)) {
         header_[subMatch[1]] = subMatch[2];
     } else {

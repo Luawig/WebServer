@@ -4,9 +4,7 @@
 
 #include "http/httpResponse.h"
 
-using namespace std;
-
-const unordered_map<string, string> HttpResponse::SUFFIX_TYPE = {
+const std::unordered_map<string, string> HttpResponse::SUFFIX_TYPE = {
         {".html",  "text/html"},
         {".xml",   "text/xml"},
         {".xhtml", "application/xhtml+xml"},
@@ -28,41 +26,40 @@ const unordered_map<string, string> HttpResponse::SUFFIX_TYPE = {
         {".js",    "text/javascript "},
 };
 
-const unordered_map<int, string> HttpResponse::CODE_STATUS = {
+const std::unordered_map<int, string> HttpResponse::CODE_STATUS = {
         {200, "OK"},
         {400, "Bad Request"},
         {403, "Forbidden"},
         {404, "Not Found"},
 };
 
-const unordered_map<int, string> HttpResponse::CODE_PATH = {
+const std::unordered_map<int, string> HttpResponse::CODE_PATH = {
         {400, "/400.html"},
         {403, "/403.html"},
         {404, "/404.html"},
 };
 
-void HttpResponse::init(const std::string &srcDir, string &path, bool isKeepAlive, int code) {
+void HttpResponse::init(const std::string &srcDir, string &path, std::string &version, bool isKeepAlive, int code) {
     assert(!srcDir.empty());
-    if (mmFile_) {
+    if (mmapFile_) {
         unmapFile();
     }
     code_ = code;
     isKeepAlive_ = isKeepAlive;
     path_ = path;
+    version_ = version;
     srcDir_ = srcDir;
-    mmFile_ = nullptr;
-    mmFileStat_ = {0};
+    mmapFile_ = nullptr;
+    fileStat_ = {0};
 }
 
 void HttpResponse::makeResponse(Buffer &buffer) {
-    /* 判断请求的资源文件 */
-    if (stat((srcDir_ + path_).c_str(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
+    if (stat((srcDir_ + path_).c_str(), &fileStat_) < 0 || S_ISDIR(fileStat_.st_mode)) {
         code_ = 404;
-    } else if (!(mmFileStat_.st_mode & S_IROTH)) {
+    } else if (!(fileStat_.st_mode & S_IROTH)) {
         code_ = 403;
-    } else if (code_ == -1) {
-        code_ = 200;
     }
+
     errorHtml_();
     addStateLine_(buffer);
     addHeader_(buffer);
@@ -70,21 +67,24 @@ void HttpResponse::makeResponse(Buffer &buffer) {
 }
 
 void HttpResponse::errorHtml_() {
-    if (CODE_PATH.count(code_) == 1) {
-        path_ = CODE_PATH.find(code_)->second;
-        stat((srcDir_ + path_).c_str(), &mmFileStat_);
+    auto it = CODE_PATH.find(code_);
+    if (it != CODE_PATH.end()) {
+        path_ = it->second;
+        stat((srcDir_ + path_).c_str(), &fileStat_);
     }
 }
 
 void HttpResponse::addStateLine_(Buffer &buffer) {
     string status;
-    if (CODE_STATUS.count(code_) == 1) {
-        status = CODE_STATUS.find(code_)->second;
-    } else {
+    auto it = CODE_STATUS.find(code_);
+    if (it == CODE_STATUS.end()) {
+        LOG_WARN("Response code error!")
         code_ = 400;
         status = CODE_STATUS.find(400)->second;
+    } else {
+        status = it->second;
     }
-    buffer.append("HTTP/1.1 " + to_string(code_) + " " + status + "\r\n");
+    buffer.append("HTTP/" + version_ + " " + std::to_string(code_) + " " + status + "\r\n");
 }
 
 void HttpResponse::addHeader_(Buffer &buffer) {
@@ -93,7 +93,7 @@ void HttpResponse::addHeader_(Buffer &buffer) {
         buffer.append("keep-alive\r\n");
         buffer.append("keep-alive: max=6, timeout=120\r\n");
     } else {
-        buffer.append("Close\r\n");
+        buffer.append("close\r\n");
     }
     buffer.append("Content-type: " + getFileType_() + "\r\n");
 }
@@ -101,6 +101,7 @@ void HttpResponse::addHeader_(Buffer &buffer) {
 void HttpResponse::addContent_(Buffer &buffer) {
     int srcFd = open((srcDir_ + path_).c_str(), O_RDONLY);
     if (srcFd < 0) {
+        LOG_WARN("open file error! file: %s", (srcDir_ + path_).c_str())
         errorContent(buffer, "file NotFound!");
         return;
     }
@@ -108,20 +109,21 @@ void HttpResponse::addContent_(Buffer &buffer) {
     /* 将文件映射到内存提高文件的访问速度 
         MAP_PRIVATE 建立一个写入时拷贝的私有映射*/
     LOG_DEBUG("filepath: %s", (srcDir_ + path_).c_str())
-    int *mmRet = (int *) mmap(nullptr, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
-    if (*mmRet == -1) {
+    auto ret = mmap(nullptr, fileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
+    if (ret == MAP_FAILED) {
+        LOG_ERROR("mmap error! file: %s", (srcDir_ + path_).c_str())
         errorContent(buffer, "file NotFound!");
         return;
     }
-    mmFile_ = (char *) mmRet;
+    mmapFile_ = (char *) ret;
     close(srcFd);
-    buffer.append("Content-length: " + to_string(mmFileStat_.st_size) + "\r\n\r\n");
+    buffer.append("Content-length: " + std::to_string(fileStat_.st_size) + "\r\n\r\n");
 }
 
 void HttpResponse::unmapFile() {
-    if (mmFile_) {
-        munmap(mmFile_, mmFileStat_.st_size);
-        mmFile_ = nullptr;
+    if (mmapFile_) {
+        munmap(mmapFile_, fileStat_.st_size);
+        mmapFile_ = nullptr;
     }
 }
 
@@ -148,10 +150,10 @@ void HttpResponse::errorContent(Buffer &buffer, const std::string &message) cons
     } else {
         status = "Bad Request";
     }
-    body += to_string(code_) + " : " + status + "\n";
+    body += std::to_string(code_) + " : " + status + "\n";
     body += "<p>" + message + "</p>";
     body += "<hr><em>TinyWebServer</em></body></html>";
 
-    buffer.append("Content-length: " + to_string(body.size()) + "\r\n\r\n");
+    buffer.append("Content-length: " + std::to_string(body.size()) + "\r\n\r\n");
     buffer.append(body);
 }
