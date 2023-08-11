@@ -15,10 +15,11 @@ const unordered_map<string, int> HttpRequest::DEFAULT_HTML_TAG{
         {"/login.html",    1},};
 
 bool HttpRequest::isKeepAlive() const {
-    if (header_.count("Connection") == 1) {
-        return header_.find("Connection")->second == "keep-alive" && version_ == "1.1";
+    if (version_ != "1.1") {
+        return false;
     }
-    return false;
+    auto it = header_.find("Connection");
+    return (it != header_.end() && it->second == "keep-alive");
 }
 
 bool HttpRequest::parse(Buffer &buffer) {
@@ -53,7 +54,6 @@ bool HttpRequest::parse(Buffer &buffer) {
         }
         buffer.retrieveUntil(lineEnd + 2);
     }
-    LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str())
     return true;
 }
 
@@ -78,6 +78,7 @@ bool HttpRequest::parseRequestLine_(const std::string &line) {
         path_ = subMatch[2];
         version_ = subMatch[3];
         state_ = HEADERS;
+        LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str())
         return true;
     }
     LOG_ERROR("RequestLine Error")
@@ -98,7 +99,7 @@ void HttpRequest::parseBody_(const std::string &line) {
     body_ = line;
     parsePost_();
     state_ = FINISH;
-    LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size())
+    LOG_DEBUG("Body: %s, len: %d", line.c_str(), line.size())
 }
 
 int HttpRequest::convertHex_(char ch) {
