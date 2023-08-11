@@ -36,7 +36,6 @@ public:
     void run();
 
 private:
-    void initEventMode_();
 
     bool initSocket_();
 
@@ -64,12 +63,6 @@ private:
 
     // 端口号
     unsigned int port_{10086};
-
-    // listenfd触发模式，0 LT，1 ET
-    bool listenfdMode_{false};
-
-    // connfd触发模式，0 LT，1 ET
-    bool connfdMode_{false};
 
     // 关闭 socket 时是否等待
     bool optLinger_{false};
@@ -113,8 +106,8 @@ private:
     //
     bool isClose_{false};
 
-    uint32_t listenEvent_{};
-    uint32_t connEvent_{};
+    uint32_t listenTrigMode_{EPOLLRDHUP};
+    uint32_t connTrigMode_{EPOLLONESHOT | EPOLLRDHUP};
 
     std::unique_ptr<HeapTimer> timer_;
     std::unique_ptr<ThreadPool> threadpool_;

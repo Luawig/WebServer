@@ -18,7 +18,8 @@ WebServer::WebServer(int argc, char *const *argv) : timer_(new HeapTimer()),
     HttpConnection::srcDir = srcDir_;
     SqlConnPool::Instance()->init("localhost", sqlPort_, sqlUser_.c_str(), sqlPasswd_.c_str(), sqlDatabase_.c_str(),
                                   sqlPoolNum_);
-    initEventMode_();
+
+    HttpConnection::isET = connTrigMode_ & EPOLLET;
 
     if (!initSocket_()) {
         isClose_ = true;
@@ -31,8 +32,8 @@ WebServer::WebServer(int argc, char *const *argv) : timer_(new HeapTimer()),
             LOG_INFO("========== Server init ==========")
             LOG_INFO("Port:%d, OpenLinger: %s", port_, optLinger_ ? "true" : "false")
             LOG_INFO("Listen Mode: %s, OpenConn Mode: %s",
-                     (listenEvent_ & EPOLLET ? "ET" : "LT"),
-                     (connEvent_ & EPOLLET ? "ET" : "LT"))
+                     (listenTrigMode_ & EPOLLET ? "ET" : "LT"),
+                     (connTrigMode_ & EPOLLET ? "ET" : "LT"))
             LOG_INFO("LogSys level: %d", logLevel_)
             LOG_INFO("srcDir: %s", srcDir_)
             LOG_INFO("SqlConnPool num: %d, ThreadPool num: %d", sqlPoolNum_, threadPoolNum_)
@@ -55,8 +56,8 @@ void WebServer::parse_args(int argc, char *const *argv) {
                 port_ = std::stoi(optarg);
                 break;
             case 'm':
-                listenfdMode_ = std::stoi(optarg) & 2;
-                connfdMode_ = std::stoi(optarg) & 1;
+                connTrigMode_ |= (std::stoi(optarg) & 1) ? EPOLLET : 0;
+                listenTrigMode_ |= (std::stoi(optarg) & 2) ? EPOLLET : 0;
                 break;
             case 'o':
                 optLinger_ = std::stoi(optarg);
@@ -100,7 +101,6 @@ void WebServer::run() {
             } else if (event & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 assert(users_.count(fd) > 0);
                 closeConn_(users_[fd]);
-
             } else if (event & EPOLLIN) {
                 assert(users_.count(fd) > 0);
                 dealRead_(users_[fd]);
@@ -113,12 +113,6 @@ void WebServer::run() {
         }
 
     }
-}
-
-void WebServer::initEventMode_() {
-    listenEvent_ = EPOLLRDHUP | (EPOLLET & listenfdMode_);
-    connEvent_ = EPOLLONESHOT | EPOLLRDHUP | (EPOLLET & connfdMode_);
-    HttpConnection::isET = connfdMode_;
 }
 
 bool WebServer::initSocket_() {
@@ -176,7 +170,7 @@ bool WebServer::initSocket_() {
         return false;
     }
 
-    ret = epoller_->AddFd(listenfd_, listenEvent_ | EPOLLIN);
+    ret = epoller_->AddFd(listenfd_, listenTrigMode_ | EPOLLIN);
     if (ret == 0) {
         LOG_ERROR("Add listen error!")
         close(listenfd_);
@@ -203,7 +197,7 @@ void WebServer::dealListen_() {
             return;
         }
         addClient_(fd, addr);
-    } while (listenEvent_ & EPOLLET);
+    } while (listenTrigMode_ & EPOLLET);
 }
 
 void WebServer::sendError_(int fd, const char *info) {
@@ -218,20 +212,26 @@ void WebServer::addClient_(int fd, sockaddr_in addr) {
     users_[fd] = new HttpConnection(fd, addr);
     timer_->add(fd, timeoutMS_, [this, user = users_[fd]] { closeConn_(user); });
 
-    epoller_->AddFd(fd, EPOLLIN | connEvent_);
-    setFdNonblock_(fd);
-    LOG_INFO("Client[%d] in!", users_[fd]->getFd())
+    if (!epoller_->AddFd(fd, EPOLLIN | connTrigMode_)) {
+        LOG_WARN("Add client[%d] error!", fd)
+    } else {
+        setFdNonblock_(fd);
+        LOG_INFO("Client[%d] in!", users_[fd]->getFd())
+    }
 }
 
 void WebServer::closeConn_(HttpConnection *client) {
-    LOG_INFO("Client[%d] quit!", client->getFd())
-    epoller_->DelFd(client->getFd());
-    auto it = std::find_if(users_.begin(), users_.end(), [client](const auto &pair) {
-        return pair.second == client;
-    });
-    if (it != users_.end()) {
-        it->second = nullptr;
-        delete client;
+    if (!epoller_->DelFd(client->getFd())) {
+        LOG_ERROR("Del client[%d] error!", client->getFd())
+    } else {
+        LOG_INFO("Client[%d] quit!", client->getFd())
+        auto it = std::find_if(users_.begin(), users_.end(), [client](const auto &pair) {
+            return pair.second == client;
+        });
+        if (it != users_.end()) {
+            it->second = nullptr;
+            delete client;
+        }
     }
 }
 
@@ -261,9 +261,13 @@ void WebServer::onRead_(HttpConnection *client) {
 
 void WebServer::onProcess(HttpConnection *client) {
     if (client->process()) {
-        epoller_->ModFd(client->getFd(), connEvent_ | EPOLLOUT);
+        if (!epoller_->ModFd(client->getFd(), connTrigMode_ | EPOLLOUT)) {
+            LOG_WARN("ModFd error!")
+        }
     } else {
-        epoller_->ModFd(client->getFd(), connEvent_ | EPOLLIN);
+        if (!epoller_->ModFd(client->getFd(), connTrigMode_ | EPOLLIN)) {
+            LOG_WARN("ModFd error!")
+        }
     }
 }
 
@@ -280,7 +284,9 @@ void WebServer::onWrite_(HttpConnection *client) {
     } else if (ret < 0) {
         if (writeErrno == EAGAIN) {
             /* 继续传输 */
-            epoller_->ModFd(client->getFd(), connEvent_ | EPOLLOUT);
+            if (!epoller_->ModFd(client->getFd(), connTrigMode_ | EPOLLOUT)) {
+                LOG_WARN("ModFd error!")
+            }
             return;
         }
     }

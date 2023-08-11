@@ -5,7 +5,9 @@
 #include "server/epoller.h"
 
 bool Epoller::AddFd(int fd, uint32_t events) const {
-    if (fd < 0) return false;
+    if (fd < 0) {
+        return false;
+    }
     epoll_event ev = {0};
     ev.data.fd = fd;
     ev.events = events;
@@ -13,7 +15,9 @@ bool Epoller::AddFd(int fd, uint32_t events) const {
 }
 
 bool Epoller::ModFd(int fd, uint32_t events) const {
-    if (fd < 0) return false;
+    if (fd < 0) {
+        return false;
+    }
     epoll_event ev = {0};
     ev.data.fd = fd;
     ev.events = events;
@@ -21,7 +25,9 @@ bool Epoller::ModFd(int fd, uint32_t events) const {
 }
 
 bool Epoller::DelFd(int fd) const {
-    if (fd < 0) return false;
+    if (fd < 0) {
+        return false;
+    }
     epoll_event ev = {0};
     return 0 == epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, &ev);
 }

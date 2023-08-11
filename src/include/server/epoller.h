@@ -15,11 +15,11 @@ public:
 
     ~Epoller() { close(epollFd_); }
 
-    bool AddFd(int fd, uint32_t events) const;
+    [[nodiscard]] bool AddFd(int fd, uint32_t events) const;
 
-    bool ModFd(int fd, uint32_t events) const;
+    [[nodiscard]] bool ModFd(int fd, uint32_t events) const;
 
-    bool DelFd(int fd) const;
+    [[nodiscard]] bool DelFd(int fd) const;
 
     int Wait(int timeoutMs = -1);
 
