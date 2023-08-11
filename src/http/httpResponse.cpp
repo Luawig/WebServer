@@ -56,7 +56,7 @@ void HttpResponse::init(const std::string &srcDir, string &path, bool isKeepAliv
 
 void HttpResponse::makeResponse(Buffer &buffer) {
     /* 判断请求的资源文件 */
-    if (stat((srcDir_ + path_).data(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
+    if (stat((srcDir_ + path_).c_str(), &mmFileStat_) < 0 || S_ISDIR(mmFileStat_.st_mode)) {
         code_ = 404;
     } else if (!(mmFileStat_.st_mode & S_IROTH)) {
         code_ = 403;
@@ -72,7 +72,7 @@ void HttpResponse::makeResponse(Buffer &buffer) {
 void HttpResponse::errorHtml_() {
     if (CODE_PATH.count(code_) == 1) {
         path_ = CODE_PATH.find(code_)->second;
-        stat((srcDir_ + path_).data(), &mmFileStat_);
+        stat((srcDir_ + path_).c_str(), &mmFileStat_);
     }
 }
 
@@ -99,7 +99,7 @@ void HttpResponse::addHeader_(Buffer &buffer) {
 }
 
 void HttpResponse::addContent_(Buffer &buffer) {
-    int srcFd = open((srcDir_ + path_).data(), O_RDONLY);
+    int srcFd = open((srcDir_ + path_).c_str(), O_RDONLY);
     if (srcFd < 0) {
         errorContent(buffer, "file NotFound!");
         return;
@@ -107,7 +107,7 @@ void HttpResponse::addContent_(Buffer &buffer) {
 
     /* 将文件映射到内存提高文件的访问速度 
         MAP_PRIVATE 建立一个写入时拷贝的私有映射*/
-    LOG_DEBUG("file path %s", (srcDir_ + path_).data())
+    LOG_DEBUG("filepath: %s", (srcDir_ + path_).c_str())
     int *mmRet = (int *) mmap(nullptr, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
     if (*mmRet == -1) {
         errorContent(buffer, "file NotFound!");
