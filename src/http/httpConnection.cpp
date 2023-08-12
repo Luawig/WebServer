@@ -35,19 +35,17 @@ ssize_t HttpConnection::read(int *saveErrno) {
 }
 
 ssize_t HttpConnection::write(int *saveErrno) {
-    ssize_t len;
+    ssize_t len_sum = 0;
     do {
-        len = writev(fd_, iov_, iovCnt_);
-        if (len <= 0) {
+        auto len = writev(fd_, iov_, iovCnt_);
+        if (len < 0) {
             *saveErrno = errno;
             break;
         }
-        if (iov_[0].iov_len + iov_[1].iov_len == 0) {
-            break;
-        } /* 传输结束 */
-        else if (static_cast<size_t>(len) > iov_[0].iov_len) {
+        if (len > iov_[0].iov_len) {
             iov_[1].iov_base = (uint8_t *) iov_[1].iov_base + (len - iov_[0].iov_len);
             iov_[1].iov_len -= (len - iov_[0].iov_len);
+
             if (iov_[0].iov_len) {
                 writeBuffer_.retrieveAll();
                 iov_[0].iov_len = 0;
@@ -57,8 +55,9 @@ ssize_t HttpConnection::write(int *saveErrno) {
             iov_[0].iov_len -= len;
             writeBuffer_.retrieve(len);
         }
+        len_sum += len;
     } while (isET || writeBytes() > 10240);
-    return len;
+    return len_sum;
 }
 
 bool HttpConnection::process() {
