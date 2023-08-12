@@ -27,11 +27,15 @@ HttpConnection::~HttpConnection() {
 }
 
 ssize_t HttpConnection::read(int *saveErrno) {
-    ssize_t len;
+    ssize_t len_sum = 0;
     do {
-        len = readBuffer_.readFd(fd_, saveErrno);
-    } while (len && isET);
-    return len;
+        auto len = readBuffer_.readFd(fd_, saveErrno);
+        if (len <= 0) {
+            break;
+        }
+        len_sum += len;
+    } while (isET);
+    return len_sum;
 }
 
 ssize_t HttpConnection::write(int *saveErrno) {

@@ -256,6 +256,7 @@ void WebServer::onRead_(HttpConnection *client) {
     auto ret = client->read(&readErrno);
     // 读取失败并且不是操作当前不可用
     if (ret <= 0 && readErrno != EAGAIN) {
+        LOG_WARN("Read client[%d] error!", client->getFd())
         closeConn_(client);
         return;
     }
@@ -278,20 +279,21 @@ void WebServer::onWrite_(HttpConnection *client) {
     assert(client);
     int writeErrno = 0;
     auto ret = client->write(&writeErrno);
-    if (client->writeBytes() == 0) {
-        /* 传输完成 */
-        if (client->isKeepAlive()) {
-            onProcess(client);
+    if (ret < 0) {
+        if (writeErrno != EAGAIN) {
+            LOG_WARN("Send data to client[%d] error!", client->getFd())
+            closeConn_(client);
             return;
         }
-    } else if (ret < 0) {
-        if (writeErrno == EAGAIN) {
-            /* 继续传输 */
-            if (!epoller_->ModFd(client->getFd(), connTrigMode_ | EPOLLOUT)) {
-                LOG_WARN("ModFd error!")
-            }
-            return;
+        if (!epoller_->ModFd(client->getFd(), connTrigMode_ | EPOLLOUT)) {
+            LOG_WARN("ModFd error!")
+            closeConn_(client);
         }
+        return;
+    }
+    if (client->isKeepAlive()) {
+        onProcess(client);
+        return;
     }
     closeConn_(client);
 }
