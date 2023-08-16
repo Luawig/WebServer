@@ -115,9 +115,10 @@ void HttpRequest::parsePost_() {
         return;
     }
     parseFromUrlencoded_();
-    if (DEFAULT_HTML_TAG.count(path_)) {
-        int tag = DEFAULT_HTML_TAG.find(path_)->second;
-        LOG_DEBUG("Tag:%d", tag)
+    auto it = DEFAULT_HTML_TAG.find(path_);
+    if (it != DEFAULT_HTML_TAG.end()) {
+        int tag = it->second;
+        LOG_DEBUG("Tag: %d (%s)", tag, tag ? "Login" : "Register")
         if (tag == 0 || tag == 1) {
             bool isLogin = (tag == 1);
             if (userVerify_(post_["username"], post_["password"], isLogin)) {
@@ -140,8 +141,7 @@ void HttpRequest::parseFromUrlencoded_() {
     int i = 0, j = 0;
 
     for (; i < n; i++) {
-        char ch = body_[i];
-        switch (ch) {
+        switch (body_[i]) {
             case '=':
                 key = body_.substr(j, i - j);
                 j = i + 1;
@@ -176,7 +176,7 @@ bool HttpRequest::userVerify_(const std::string &name, const std::string &pwd, b
     if (name.empty() || pwd.empty()) {
         return false;
     }
-    LOG_INFO("Verify name:%s pwd:%s", name.c_str(), pwd.c_str())
+    LOG_INFO("Verify name: %s pwd: %s", name.c_str(), pwd.c_str())
     MYSQL *sql = SqlConnPool::Instance()->getConn();
     assert(sql);
 
@@ -192,7 +192,6 @@ bool HttpRequest::userVerify_(const std::string &name, const std::string &pwd, b
     LOG_DEBUG("%s", order)
 
     if (mysql_query(sql, order)) {
-        mysql_free_result(res);
         return false;
     }
     res = mysql_store_result(sql);
@@ -200,7 +199,6 @@ bool HttpRequest::userVerify_(const std::string &name, const std::string &pwd, b
     while (MYSQL_ROW row = mysql_fetch_row(res)) {
         LOG_DEBUG("MYSQL ROW: %s %s", row[0], row[1])
         string password(row[1]);
-        /* 注册行为 且 用户名未被使用*/
         if (isLogin) {
             if (pwd == password) {
                 flag = true;
@@ -215,7 +213,6 @@ bool HttpRequest::userVerify_(const std::string &name, const std::string &pwd, b
     }
     mysql_free_result(res);
 
-    /* 注册行为 且 用户名未被使用*/
     if (!isLogin && flag) {
         LOG_DEBUG("register!")
         bzero(order, 256);
