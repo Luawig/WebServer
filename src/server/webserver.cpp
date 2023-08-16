@@ -6,11 +6,22 @@
 
 WebServer::WebServer(int argc, char *const *argv) : timer_(new HeapTimer()),
                                                     threadpool_(new ThreadPool(threadPoolNum_)),
-                                                    epoller_(new Epoller()) {
-    srcDir_ = getcwd(nullptr, 256);
-    srcLog_ = getcwd(nullptr, 256);
-    strcat(srcDir_, "/../res");
-    strcat(srcLog_, "/../log");
+                                                    epoller_(new Epoller()),
+                                                    srcDir_(new char[256]),
+                                                    srcLog_(new char[256]) {
+
+    char buf[256];
+    if (readlink("/proc/self/exe", buf, 256) < 0) {
+        LOG_ERROR("readlink error")
+        exit(EXIT_FAILURE);
+    }
+    std::filesystem::path path(buf);
+    path = path.parent_path().parent_path();
+
+    strcpy(srcDir_, path.c_str());
+    strcpy(srcLog_, path.c_str());
+    strcat(srcDir_, "/res");
+    strcat(srcLog_, "/log");
 
     parse_args(argc, argv);
 
@@ -74,7 +85,7 @@ void WebServer::parse_args(int argc, char *const *argv) {
                 break;
             default:
                 std::cerr << help(argv[0]) << std::endl;
-                exit(-1);
+                exit(EXIT_FAILURE);
         }
     }
 }

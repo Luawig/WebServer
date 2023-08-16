@@ -6,6 +6,7 @@
 #define WEBSERVER_WEBSERVER_H
 
 #include <csignal>
+#include <filesystem>
 #include <getopt.h>
 #include <iostream>
 #include <string>
