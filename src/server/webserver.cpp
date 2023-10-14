@@ -9,7 +9,6 @@ WebServer::WebServer(int argc, char *const *argv) : timer_(new HeapTimer()),
                                                     epoller_(new Epoller()),
                                                     srcDir_(new char[256]),
                                                     srcLog_(new char[256]) {
-
     char buf[256];
     if (readlink("/proc/self/exe", buf, 256) < 0) {
         LOG_ERROR("readlink error")
