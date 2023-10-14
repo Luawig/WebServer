@@ -172,6 +172,7 @@ void HttpRequest::parseFromUrlencoded_() {
     }
 }
 
+// Todo: use PreparedStatement
 bool HttpRequest::userVerify_(const std::string &name, const std::string &pwd, bool isLogin) {
     if (name.empty() || pwd.empty()) {
         return false;
